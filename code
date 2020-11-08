@@ -1,0 +1,62 @@
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import accuracy_score,confusion_matrix,classification_report,roc_auc_score,roc_curve
+from sklearn.svm import OneClassSVM
+from sklearn.neighbors import LocalOutlierFactor
+
+df=pd.read_csv('D:/python/Machine Learning/Supervised-learning/Anomaly Detection/creditcard.csv')
+df.head() #imbalanced dataset, however Isolation Forest takes care of it internally
+df.info()
+df.isnull().sum()
+sns.countplot('Class',data=df)
+
+Normal=df[df['Class']==0]
+Fraud=df[df['Class']==1] #1 for outliers
+print(Normal.shape,Fraud.shape)
+
+print(Fraud['Amount'].describe())
+print(Normal['Amount'].describe())
+
+Fraud['Amount'].hist(bins=50)
+Normal['Amount'].hist(bins=50)
+plt.scatter(Fraud['Time'],Fraud['Amount']) #checking fraud with respect to time
+plt.scatter(Normal['Time'],Normal['Amount'])
+
+print('Fraud cases',len(Fraud)/len(df))
+print('Valid Cases',len(Normal)/len(df))
+
+plt.figure(figsize=(30,30))
+sns.heatmap(df.corr(),annot=True)
+
+x=df.iloc[:,:-1]
+y=df.iloc[:,-1]
+print(x.shape,y.shape)
+
+model=IsolationForest(n_estimators=100,warm_start=False,verbose=1) #contamination- proportion of outliers in the data set
+model.fit(x)
+anomaly_score=model.decision_function(x)
+pred=model.predict(x) #1 for inliers, -1 for outliers
+pred[pred==1]=0 #reshaping it to 0 for inliers
+pred[pred==-1]=1 
+nerrors=np.sum(pred!=y)
+print(nerrors)
+
+score=accuracy_score(y,pred)
+print(classification_report(y,pred))
+print(confusion_matrix(y,pred))
+
+model1=LocalOutlierFactor(n_neighbors=20,p=1) #p is used as a denoter for euclidean or manhattan distance
+model1.fit(x)
+pred1=model1.fit_predict(x)
+pred1[pred1==1]=0
+pred1[pred1==-1]=1
+error1=np.sum(y!=pred1)
+
+score=accuracy_score(y,pred1)
+print(score)
+print(classification_report(y,pred1))
+print(confusion_matrix(y,pred1))
